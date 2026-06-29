@@ -1,0 +1,22 @@
+{
+  "name": "RateMyUni — Αξιολόγηση Καθηγητών",
+  "short_name": "RateMyUni",
+  "description": "Αξιολόγησε τους καθηγητές σου. 180+ καθηγητές από 26 ελληνικά ΑΕΙ.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0714",
+  "theme_color": "#6C3EFF",
+  "orientation": "any",
+  "lang": "el",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ],
+  "categories": ["education", "social"],
+  "shortcuts": [
+    { "name": "Νέα Κριτική",   "url": "/?action=review" },
+    { "name": "Rankings",      "url": "/?page=rankings" },
+    { "name": "Σύγκριση 1v1", "url": "/?page=compare"  }
+  ]
+}
