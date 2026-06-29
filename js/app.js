@@ -6,33 +6,11 @@
 ═══════════════════════════════════════════════════════ */
 
 /* ── Supabase Config ── */
-let supabase = null;
+// Στην κορυφή του js/app.js, βάζεις μόνο αυτά:
+const SUPABASE_URL = 'https://rncttqwxsejvlymojhgf.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_nd83uLlccMB2dkEDvMmtAw_Eb_MytFt';
 
-function initSupabase() {
-  const url = localStorage.getItem('sb_url');
-  const key = localStorage.getItem('sb_key');
-  if (url && key && window.supabase) {
-    try {
-      supabase = window.supabase.createClient(url, key);
-      document.getElementById('supabaseNotice')?.classList.remove('hidden');
-      console.log('[Supabase] Connected');
-      return true;
-    } catch(e) { console.warn('[Supabase] Init failed:', e); }
-  }
-  return false;
-}
-
-async function saveSupabaseConfig() {
-  const url = document.getElementById('sbUrl').value.trim();
-  const key = document.getElementById('sbKey').value.trim();
-  const res = document.getElementById('sbResult');
-  if (!url || !key) { showEl(res,'Συμπλήρωσε και τα δύο πεδία','err'); return; }
-  localStorage.setItem('sb_url', url);
-  localStorage.setItem('sb_key', key);
-  const ok = initSupabase();
-  if (ok) { showEl(res,'✅ Supabase συνδέθηκε! Ανανέωσε τη σελίδα.','success'); }
-  else     { showEl(res,'❌ Αποτυχία σύνδεσης. Έλεγξε τα credentials.','err'); }
-}
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ── Department options per university ── */
 const UNI_DEPTS = {
