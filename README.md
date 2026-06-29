@@ -32,6 +32,6 @@
 
 ---
 
-### 👨‍💻 Developer
+### Developer
 Developed by **Panagiotis2929**
 *   **GitHub:** [github.com/Panagiotis2929](https://github.com/Panagiotis2929)
