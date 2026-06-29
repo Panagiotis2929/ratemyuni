@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="el" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#6C3EFF"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="RateMyUni"/>
+  <meta name="description" content="Αξιολόγησε τους καθηγητές σου ανώνυμα. 180+ καθηγητές από 26 ελληνικά ΑΕΙ."/>
+  <meta property="og:title" content="RateMyUni — Αξιολόγηση Καθηγητών"/>
+  <meta property="og:description" content="Πραγματικές κριτικές από φοιτητές. Ανώνυμα. Αξιόπιστα."/>
+  <meta property="og:type" content="website"/>
+  <title>RateMyUni — Αξιολόγηση Καθηγητών</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="assets/icon-180.png"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.ico"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash" class="splash">
+  <div class="splash-inner">
+    <div class="splash-logo"><div class="splash-icon">★</div><span>RateMyUni</span></div>
+    <div class="splash-tagline">Η φωνή των φοιτητών</div>
+    <div class="splash-bar"><div class="splash-progress"></div></div>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div id="authScreen" class="auth-screen hidden">
+  <div class="auth-bg">
+    <div class="auth-orb orb-1"></div>
+    <div class="auth-orb orb-2"></div>
+    <div class="auth-orb orb-3"></div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-brand"><div class="auth-brand-icon">★</div><span>RateMyUni</span></div>
+    <p class="auth-tagline">Αξιολόγησε τους καθηγητές σου ανώνυμα</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Σύνδεση</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Εγγραφή</button>
+    </div>
+    <!-- LOGIN -->
+    <div id="formLogin" class="auth-form">
+      <div class="field-group">
+        <label>Πανεπιστημιακό Email</label>
+        <input type="email" id="loginEmail" placeholder="p21xxxxx@uom.edu.gr" autocomplete="email" inputmode="email"/>
+      </div>
+      <div class="field-group">
+        <label>Κωδικός</label>
+        <div class="pass-wrap">
+          <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"/>
+          <button class="pass-eye" onclick="togglePass('loginPass',this)" type="button">👁</button>
+        </div>
+      </div>
+      <div class="auth-remember">
+        <label class="checkbox-label"><input type="checkbox" id="rememberMe"/> Να με θυμάσαι</label>
+        <button class="link-btn" onclick="openModal('forgot')" type="button">Ξέχασα τον κωδικό</button>
+      </div>
+      <button class="btn-auth" onclick="doLogin()" type="button">Σύνδεση →</button>
+      <div class="auth-error hidden" id="loginError"></div>
+      <div class="auth-divider"><span>ή</span></div>
+      <button class="btn-guest" onclick="loginGuest()" type="button">Συνέχεια ως επισκέπτης 👤</button>
+      <p class="auth-note">Για πλήρη πρόσβαση απαιτείται πανεπιστημιακό email (.edu.gr)</p>
+    </div>
+    <!-- REGISTER -->
+    <div id="formRegister" class="auth-form hidden">
+      <div class="field-group">
+        <label>Πανεπιστημιακό Email * <span class="edu-badge">.edu.gr</span></label>
+        <input type="email" id="regEmail" placeholder="p21xxxxx@uom.edu.gr" autocomplete="email" inputmode="email"/>
+        <span class="field-hint">Μόνο πανεπιστημιακά emails γίνονται αποδεκτά</span>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Πανεπιστήμιο *</label>
+          <select id="regUni" onchange="updateDeptOptions()">
+            <option value="">Επιλογή...</option>
+            <option value="AUTH">ΑΠΘ</option>
+            <option value="EKPA">ΕΚΠΑ</option>
+            <option value="NTUA">ΕΜΠ</option>
+            <option value="OPA">ΟΠΑ</option>
+            <option value="UOM">ΠΑΝ. ΜΑΚΕΔΟΝΙΑΣ</option>
+            <option value="UPATRAS">ΠΑΝ. ΠΑΤΡΩΝ</option>
+            <option value="FORTH">ΠΑΝ. ΚΡΗΤΗΣ</option>
+            <option value="UOI">ΠΑΝ. ΙΩΑΝΝΙΝΩΝ</option>
+            <option value="DUTH">ΔΠΘ</option>
+            <option value="PANTEION">ΠΑΝΤΕΙΟΝ</option>
+            <option value="UNIPI">ΠΑΝ. ΠΕΙΡΑΙΩΣ</option>
+            <option value="AEGEAN">ΠΑΝ. ΑΙΓΑΙΟΥ</option>
+            <option value="UTH">ΠΑΝ. ΘΕΣΣΑΛΙΑΣ</option>
+            <option value="HUA">ΧΑΡΟΚΟΠΕΙΟ</option>
+            <option value="AUA">ΓΠΑ</option>
+            <option value="ASFA">ΑΣΚΤ</option>
+            <option value="EAP">ΕΑΠ</option>
+            <option value="IONIO">ΙΟΝ. ΠΑΝ.</option>
+            <option value="UNIWA">ΠΑΔΑ</option>
+            <option value="HMU">ΕΛΜΕΠΑ</option>
+            <option value="IHU">ΔΙ.ΠΑ.Ε.</option>
+            <option value="UOP">ΠΑΝ. ΠΕΛΟΠΟΝΝΗΣΟΥ</option>
+            <option value="UOWM">ΠΑΝ. ΔΥΤ. ΜΑΚΕΔΟΝΙΑΣ</option>
+            <option value="UCM">ΠΑΝ. ΚΕΝ. ΜΑΚΕΔΟΝΙΑΣ</option>
+            <option value="USE">ΠΑΝ. ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ</option>
+            <option value="OTHER">Άλλο</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Τμήμα *</label>
+          <select id="regDept"><option value="">Επιλέξτε πανεπιστήμιο...</option></select>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Username *</label>
+        <input type="text" id="regUser" placeholder="π.χ. giorgos94" autocomplete="username"/>
+      </div>
+      <div class="field-group">
+        <label>Κωδικός * <span class="field-hint">(min 8 χαρακτήρες)</span></label>
+        <div class="pass-wrap">
+          <input type="password" id="regPass" placeholder="••••••••" oninput="checkPassStrength(this.value)" autocomplete="new-password"/>
+          <button class="pass-eye" onclick="togglePass('regPass',this)" type="button">👁</button>
+        </div>
+        <div class="pass-strength" id="passStrength"></div>
+      </div>
+      <div class="field-group">
+        <label>Επιβεβαίωση Κωδικού *</label>
+        <div class="pass-wrap">
+          <input type="password" id="regPass2" placeholder="••••••••" autocomplete="new-password"/>
+          <button class="pass-eye" onclick="togglePass('regPass2',this)" type="button">👁</button>
+        </div>
+      </div>
+      <button class="btn-auth" onclick="doRegister()" type="button">Δημιουργία Λογαριασμού →</button>
+      <div class="auth-error hidden" id="registerError"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" class="app hidden">
+
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <button class="nav-brand" onclick="navigate('home')" type="button">
+        <span class="brand-star">★</span>RateMyUni
+      </button>
+      <div class="nav-search-wrap">
+        <div class="search-bar">
+          <span class="si">⌕</span>
+          <input type="search" id="searchInput" placeholder="Αναζήτηση καθηγητή, μαθήματος..."
+                 oninput="handleSearch(this.value)" autocomplete="off" autocorrect="off"/>
+          <div class="search-drop" id="searchDrop"></div>
+        </div>
+      </div>
+      <div class="nav-right">
+        <button class="nav-icon-btn" onclick="navigate('rankings')" title="Rankings" type="button">🏆</button>
+        <button class="nav-icon-btn" onclick="navigate('compare')"  title="Σύγκριση" type="button">⚖️</button>
+        <button class="nav-icon-btn" onclick="navigate('stats')"    title="Στατιστικά" type="button">📊</button>
+        <button class="nav-icon-btn" onclick="navigate('recent')"   title="Πρόσφατα" type="button">🕐</button>
+        <button class="btn-primary btn-sm" onclick="openModal('addReview')" type="button">+ Κριτική</button>
+        <div class="user-menu-wrap">
+          <button class="user-pill" onclick="toggleUserMenu()" type="button">
+            <span class="user-avatar-sm" id="navAvatar">?</span>
+            <span id="navUsername">Guest</span>
+            <span class="chevron">▾</span>
+          </button>
+          <div class="user-dropdown hidden" id="userDropdown">
+            <div class="user-drop-header" id="userDropHeader"></div>
+            <button onclick="navigate('profile'); toggleUserMenu()" type="button">👤 Προφίλ</button>
+            <button onclick="navigate('myreviews'); toggleUserMenu()" type="button">📝 Οι Κριτικές μου</button>
+            <button onclick="navigate('compare'); toggleUserMenu()" type="button">⚖️ Σύγκριση</button>
+            <button onclick="toggleTheme(); toggleUserMenu()" type="button">🌙 Dark / Light</button>
+            <div class="drop-divider"></div>
+            <button class="drop-danger" onclick="doLogout()" type="button">🚪 Αποσύνδεση</button>
+          </div>
+        </div>
+        <button class="hamburger" onclick="toggleMobileMenu()" type="button" aria-label="Menu">☰</button>
+      </div>
+    </div>
+    <div class="mobile-menu hidden" id="mobileMenu">
+      <input type="search" placeholder="Αναζήτηση..." class="mobile-search" oninput="handleSearch(this.value)"/>
+      <a onclick="navigate('home');     closeMobileMenu()">🏠 Αρχική</a>
+      <a onclick="navigate('rankings'); closeMobileMenu()">🏆 Rankings</a>
+      <a onclick="navigate('compare');  closeMobileMenu()">⚖️ Σύγκριση 1v1</a>
+      <a onclick="navigate('stats');    closeMobileMenu()">📊 Στατιστικά</a>
+      <a onclick="navigate('recent');   closeMobileMenu()">🕐 Πρόσφατα</a>
+      <a onclick="navigate('profile');  closeMobileMenu()">👤 Προφίλ</a>
+      <a onclick="openModal('addReview'); closeMobileMenu()">✏️ Νέα Κριτική</a>
+      <a onclick="toggleTheme()">🌙 Dark / Light</a>
+      <a class="mobile-logout" onclick="doLogout()">🚪 Αποσύνδεση</a>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- HOME -->
+    <div id="page-home" class="page active">
+      <section class="hero">
+        <div class="hero-bg"><div class="h-orb o1"></div><div class="h-orb o2"></div><div class="h-orb o3"></div></div>
+        <div class="hero-content">
+          <div class="hero-badge">🎓 Η #1 πλατφόρμα αξιολόγησης στην Ελλάδα</div>
+          <h1 class="hero-title">Βρες τον <span class="g-text">καλύτερο καθηγητή</span> για εσένα</h1>
+          <p class="hero-sub">Πραγματικές κριτικές από φοιτητές. Ανώνυμα. Αξιόπιστα.</p>
+          <div class="hero-btns">
+            <button class="btn-hero-p" onclick="document.getElementById('searchInput').focus()" type="button">Αναζήτηση →</button>
+            <button class="btn-hero-s" onclick="navigate('compare')" type="button">⚖️ Σύγκριση 1v1</button>
+          </div>
+          <div class="hero-stats">
+            <div class="hs"><span class="hs-n" data-t="4200">0</span><span>Κριτικές</span></div>
+            <div class="hs-div"></div>
+            <div class="hs"><span class="hs-n" data-t="180">0</span><span>Καθηγητές</span></div>
+            <div class="hs-div"></div>
+            <div class="hs"><span class="hs-n" data-t="26">0</span><span>ΑΕΙ</span></div>
+            <div class="hs-div"></div>
+            <div class="hs"><span class="hs-n" data-t="45">0</span><span>Τμήματα</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section"><div class="container"><div id="potmWrap"></div></div></section>
+
+      <section class="section" style="padding-top:0">
+        <div class="container">
+          <div class="filters-card">
+            <div class="fg">
+              <label>Πανεπιστήμιο</label>
+              <select id="fUni" onchange="applyFilters()">
+                <option value="">Όλα</option>
+                <option>ΑΠΘ</option><option>ΕΚΠΑ</option><option>ΕΜΠ</option>
+                <option>ΟΠΑ</option><option>ΠΑΝ. ΜΑΚΕΔΟΝΙΑΣ</option>
+                <option>ΠΑΝ. ΠΑΤΡΩΝ</option><option>ΠΑΝ. ΚΡΗΤΗΣ</option>
+                <option>ΠΑΝ. ΙΩΑΝΝΙΝΩΝ</option><option>ΔΠΘ</option>
+                <option>ΠΑΝΤΕΙΟΝ</option><option>ΠΑΝ. ΠΕΙΡΑΙΩΣ</option>
+                <option>ΠΑΝ. ΑΙΓΑΙΟΥ</option><option>ΠΑΝ. ΘΕΣΣΑΛΙΑΣ</option>
+                <option>ΧΑΡΟΚΟΠΕΙΟ</option><option>ΓΠΑ</option>
+                <option>ΑΣΚΤ</option><option>ΕΑΠ</option>
+                <option>ΙΟΝ. ΠΑΝ.</option><option>ΠΑΔΑ</option>
+                <option>ΕΛΜΕΠΑ</option><option>ΔΙ.ΠΑ.Ε.</option>
+                <option>ΠΑΝ. ΠΕΛΟΠΟΝΝΗΣΟΥ</option><option>ΠΑΝ. ΔΥΤ. ΜΑΚΕΔΟΝΙΑΣ</option>
+                <option>ΠΑΝ. ΚΕΝ. ΜΑΚΕΔΟΝΙΑΣ</option><option>ΠΑΝ. ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Τμήμα</label>
+              <select id="fDept" onchange="applyFilters()">
+                <option value="">Όλα</option>
+                <option>Πληροφορική</option><option>Πληροφορική & Τηλεπικοινωνίες</option>
+                <option>Εφαρμοσμένη Πληροφορική</option><option>Επιστήμη Υπολογιστών</option>
+                <option>Μηχανική Η/Υ & Πληροφορικής</option>
+                <option>Ηλεκτρολόγοι Μηχ. & Μηχ. Υπολ.</option>
+                <option>Μηχανολόγοι Μηχανικοί</option><option>Αρχιτεκτονική</option>
+                <option>Πολιτικοί Μηχανικοί</option><option>Χημικοί Μηχανικοί</option>
+                <option>Μαθηματικά</option><option>Φυσική</option>
+                <option>Χημεία</option><option>Βιολογία</option>
+                <option>Ιατρική</option><option>Νομική</option>
+                <option>Οικονομική Επιστήμη</option><option>Οικονομικές Επιστήμες</option>
+                <option>Χρηματοοικονομική & Τραπεζική</option>
+                <option>Μάρκετινγκ & Επικοινωνία</option>
+                <option>Διοίκηση Επιχειρήσεων</option>
+                <option>Λογιστική & Χρηματοοικονομική</option>
+                <option>Ψυχολογία</option><option>Φιλολογία</option>
+                <option>Κοινωνιολογία</option><option>Φιλοσοφία</option>
+                <option>Καλές Τέχνες</option><option>Νοσηλευτική</option>
+                <option>Διαιτολογία & Διατροφή</option>
+                <option>Επιστήμη & Τεχνολογία Τροφίμων</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Μάθημα</label>
+              <input type="text" id="fCourse" placeholder="π.χ. Αλγόριθμοι" oninput="applyFilters()"/>
+            </div>
+            <div class="fg">
+              <label>Δυσκολία ≤ <b id="diffLbl">5</b></label>
+              <input type="range" min="1" max="5" value="5" id="fDiff"
+                     oninput="document.getElementById('diffLbl').textContent=this.value; applyFilters()" class="slider"/>
+            </div>
+            <div class="fg">
+              <label>Ταξινόμηση</label>
+              <div class="sort-pills">
+                <button class="sp active" onclick="setSort('rating',this)" type="button">⭐ Βαθμολογία</button>
+                <button class="sp" onclick="setSort('alpha',this)" type="button">🔤 A→Ω</button>
+                <button class="sp" onclick="setSort('recent',this)" type="button">🕐 Πρόσφατο</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top:0">
+        <div class="container">
+          <div class="sh"><h2>🔥 Trending</h2><span class="badge-pill" id="trendPill"></span></div>
+          <div id="trendingRow"></div>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top:0">
+        <div class="container">
+          <div class="sh"><h2>Καθηγητές</h2><span class="badge-pill" id="profCount"></span></div>
+          <div class="profs-grid" id="profsGrid"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- PROFESSOR DETAIL -->
+    <div id="page-professor" class="page">
+      <div class="container">
+        <button class="back-btn" onclick="navigate('home')" type="button">← Πίσω</button>
+        <div id="profDetail"></div>
+      </div>
+    </div>
+
+    <!-- COMPARE 1v1 -->
+    <div id="page-compare" class="page">
+      <div class="container">
+        <div class="page-hdr"><h1>⚖️ Σύγκριση 1v1</h1><p>Επίλεξε δύο καθηγητές για αναλυτική σύγκριση</p></div>
+        <div class="compare-pickers">
+          <div class="compare-picker">
+            <div class="picker-label">Καθηγητής Α</div>
+            <div class="picker-search">
+              <input type="text" id="cmp1Input" placeholder="Αναζήτηση..." oninput="cmpSearch(1,this.value)"/>
+              <div class="picker-drop hidden" id="cmpDrop1"></div>
+            </div>
+          </div>
+          <div class="compare-vs">VS</div>
+          <div class="compare-picker">
+            <div class="picker-label">Καθηγητής Β</div>
+            <div class="picker-search">
+              <input type="text" id="cmp2Input" placeholder="Αναζήτηση..." oninput="cmpSearch(2,this.value)"/>
+              <div class="picker-drop hidden" id="cmpDrop2"></div>
+            </div>
+          </div>
+        </div>
+        <div id="compareResult" class="compare-result hidden"></div>
+      </div>
+    </div>
+
+    <!-- RANKINGS -->
+    <div id="page-rankings" class="page">
+      <div class="container">
+        <div class="page-hdr"><h1>🏆 Rankings</h1><p>Κορυφαίοι καθηγητές βάσει αξιολογήσεων</p></div>
+        <div class="rank-filters">
+          <select id="rankUni" onchange="renderRankings()">
+            <option value="">Όλα τα πανεπιστήμια</option>
+            <option>ΑΠΘ</option><option>ΕΚΠΑ</option><option>ΕΜΠ</option>
+            <option>ΟΠΑ</option><option>ΠΑΝ. ΜΑΚΕΔΟΝΙΑΣ</option>
+            <option>ΠΑΝ. ΠΑΤΡΩΝ</option><option>ΠΑΝ. ΚΡΗΤΗΣ</option>
+            <option>ΠΑΝ. ΙΩΑΝΝΙΝΩΝ</option><option>ΔΠΘ</option>
+            <option>ΠΑΝΤΕΙΟΝ</option><option>ΠΑΝ. ΠΕΙΡΑΙΩΣ</option>
+            <option>ΠΑΝ. ΑΙΓΑΙΟΥ</option><option>ΠΑΝ. ΘΕΣΣΑΛΙΑΣ</option>
+            <option>ΧΑΡΟΚΟΠΕΙΟ</option><option>ΓΠΑ</option>
+            <option>ΑΣΚΤ</option><option>ΕΑΠ</option><option>ΙΟΝ. ΠΑΝ.</option>
+            <option>ΠΑΔΑ</option><option>ΕΛΜΕΠΑ</option><option>ΔΙ.ΠΑ.Ε.</option>
+            <option>ΠΑΝ. ΠΕΛΟΠΟΝΝΗΣΟΥ</option>
+          </select>
+          <select id="rankDept" onchange="renderRankings()">
+            <option value="">Όλα τα τμήματα</option>
+            <option>Πληροφορική</option><option>Μαθηματικά</option>
+            <option>Φυσική</option><option>Χημεία</option><option>Βιολογία</option>
+            <option>Ηλεκτρολόγοι Μηχ. & Μηχ. Υπολ.</option>
+            <option>Μηχανολόγοι Μηχανικοί</option>
+            <option>Ιατρική</option><option>Νομική</option>
+            <option>Οικονομική Επιστήμη</option><option>Ψυχολογία</option>
+            <option>Φιλολογία</option><option>Καλές Τέχνες</option>
+          </select>
+        </div>
+        <div id="rankList"></div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div id="page-stats" class="page">
+      <div class="container">
+        <div class="page-hdr"><h1>📊 Στατιστικά</h1><p>Αναλυτικά δεδομένα πλατφόρμας</p></div>
+        <div id="statsContent"></div>
+      </div>
+    </div>
+
+    <!-- RECENT -->
+    <div id="page-recent" class="page">
+      <div class="container">
+        <div class="page-hdr"><h1>🕐 Πρόσφατα Προβεβλημένοι</h1></div>
+        <div id="recentContent"></div>
+      </div>
+    </div>
+
+    <!-- MY REVIEWS -->
+    <div id="page-myreviews" class="page">
+      <div class="container">
+        <div class="page-hdr"><h1>📝 Οι Κριτικές μου</h1></div>
+        <div id="myReviewsContent"></div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="page-profile" class="page">
+      <div class="container"><div id="profileContent"></div></div>
+    </div>
+
+  </main>
+
+  <div id="toastZone"></div>
+  <div id="backdrop" class="backdrop hidden" onclick="closeModal()"></div>
+
+  <!-- MODAL: ADD REVIEW -->
+  <div id="modal-addReview" class="modal hidden">
+    <div class="modal-head"><h2>✏️ Νέα Κριτική</h2><button class="mclose" onclick="closeModal()" type="button">✕</button></div>
+    <div class="modal-body">
+      <div class="fg"><label>Καθηγητής *</label><input type="text" id="rv-name" placeholder="Ονοματεπώνυμο"/></div>
+      <div class="frow">
+        <div class="fg"><label>Τμήμα *</label>
+          <select id="rv-dept">
+            <option value="">Επιλογή...</option>
+            <option>Πληροφορική</option><option>Πληροφορική & Τηλεπικοινωνίες</option>
+            <option>Εφαρμοσμένη Πληροφορική</option><option>Επιστήμη Υπολογιστών</option>
+            <option>Μηχανική Η/Υ & Πληροφορικής</option>
+            <option>Ηλεκτρολόγοι Μηχ. & Μηχ. Υπολ.</option>
+            <option>Μηχανολόγοι Μηχανικοί</option><option>Αρχιτεκτονική</option>
+            <option>Πολιτικοί Μηχανικοί</option><option>Χημικοί Μηχανικοί</option>
+            <option>Μαθηματικά</option><option>Φυσική</option><option>Χημεία</option>
+            <option>Βιολογία</option><option>Ιατρική</option><option>Νομική</option>
+            <option>Οικονομική Επιστήμη</option><option>Οικονομικές Επιστήμες</option>
+            <option>Διοίκηση Επιχειρήσεων</option><option>Χρηματοοικονομική & Τραπεζική</option>
+            <option>Λογιστική & Χρηματοοικονομική</option>
+            <option>Μάρκετινγκ & Επικοινωνία</option>
+            <option>Ψυχολογία</option><option>Φιλολογία</option>
+            <option>Φιλοσοφία</option><option>Κοινωνιολογία</option>
+            <option>Καλές Τέχνες</option><option>Νοσηλευτική</option>
+            <option>Διαιτολογία & Διατροφή</option>
+            <option>Επιστήμη & Τεχνολογία Τροφίμων</option>
+            <option>Άλλο</option>
+          </select>
+        </div>
+        <div class="fg"><label>Μάθημα</label><input type="text" id="rv-course" placeholder="π.χ. Αλγόριθμοι"/></div>
+      </div>
+      <div class="fg"><label>Εξάμηνο</label>
+        <select id="rv-sem">
+          <option value="1">1ο</option><option value="2">2ο</option><option value="3">3ο</option>
+          <option value="4">4ο</option><option value="5">5ο</option><option value="6">6ο</option>
+          <option value="7">7ο</option><option value="8">8ο+</option>
+        </select>
+      </div>
+      <div class="star-grid">
+        <div class="star-row"><label>Συνολική Εκτίμηση</label><div class="stars" data-f="overall"></div></div>
+        <div class="star-row"><label>Δυσκολία</label><div class="stars" data-f="difficulty"></div></div>
+        <div class="star-row"><label>Οργάνωση</label><div class="stars" data-f="organization"></div></div>
+        <div class="star-row"><label>Εμπνέει</label><div class="stars" data-f="inspiration"></div></div>
+      </div>
+      <div class="fg pos-rel">
+        <label>Κριτική * <span class="hint">(20–500 χαρ.)</span></label>
+        <textarea id="rv-text" rows="4" placeholder="Μοιράσου την εμπειρία σου..." oninput="updateCharCount(this)"></textarea>
+        <span class="char-count" id="charCnt">0/500</span>
+      </div>
+      <div class="fg">
+        <label>Χαρακτηριστικά</label>
+        <div class="chip-select">
+          <button class="chip" onclick="toggleChip(this)" data-v="Εύκολος" type="button">🎯 Εύκολος</button>
+          <button class="chip" onclick="toggleChip(this)" data-v="Δύσκολος" type="button">💀 Δύσκολος</button>
+          <button class="chip" onclick="toggleChip(this)" data-v="Εμπνέει" type="button">💡 Εμπνέει</button>
+          <button class="chip" onclick="toggleChip(this)" data-v="Οργανωμένος" type="button">📚 Οργανωμένος</button>
+          <button class="chip" onclick="toggleChip(this)" data-v="Πρακτικός" type="button">🔧 Πρακτικός</button>
+          <button class="chip" onclick="toggleChip(this)" data-v="Διαθέσιμος" type="button">📞 Διαθέσιμος</button>
+          <button class="chip" onclick="toggleChip(this)" data-v="Online" type="button">💻 Online-friendly</button>
+          <button class="chip" onclick="toggleChip(this)" data-v="Αυστηρός" type="button">⚖️ Αυστηρός</button>
+        </div>
+      </div>
+      <!-- PASS RATE -->
+      <div class="fg pass-rate-q">
+        <label>Πέρασες το μάθημα; *</label>
+        <div class="pass-options">
+          <button class="pass-opt" id="passYes" onclick="selectPass(true)"  type="button">✅ Ναι, πέρασα</button>
+          <button class="pass-opt" id="passNo"  onclick="selectPass(false)" type="button">❌ Όχι, κόπηκα</button>
+        </div>
+      </div>
+      <div class="fg pass-rate-q">
+        <label>Πέρασες το μάθημα; *</label>
+        <div class="pass-options">
+          <button class="pass-opt" id="passYes" onclick="selectPass(true)" type="button">✅ Ναι, πέρασα!</button>
+          <button class="pass-opt" id="passNo"  onclick="selectPass(false)" type="button">❌ Όχι, κόπηκα</button>
+        </div>
+      </div>
+      <button class="btn-auth" onclick="submitReview()" type="button">Υποβολή Κριτικής →</button>
+    </div>
+  </div>
+
+  <!-- MODAL: LEVEL UP -->
+  <div id="modal-levelup" class="modal modal-levelup hidden">
+    <div class="levelup-inner">
+      <div class="levelup-icon">⬆️</div>
+      <div class="levelup-title">Level Up!</div>
+      <div class="levelup-sub" id="levelupSub">Έφτασες στο Level 2!</div>
+      <div class="levelup-xp" id="levelupXp">+50 XP</div>
+      <button class="btn-auth" onclick="closeModal()" type="button" style="margin-top:16px">Συνέχεια 🎉</button>
+    </div>
+  </div>
+
+  <!-- MODAL: BADGE UNLOCK -->
+  <div id="modal-badge" class="modal modal-badge hidden">
+    <div class="badge-unlock-inner">
+      <div class="badge-unlock-icon" id="badgeUnlockIcon">🥉</div>
+      <div class="badge-unlock-title">Badge Ξεκλειδώθηκε!</div>
+      <div class="badge-unlock-name" id="badgeUnlockName">Πρώτη Κριτική</div>
+      <div class="badge-unlock-desc" id="badgeUnlockDesc">Καλώς ήρθες στην κοινότητα!</div>
+      <button class="btn-auth" onclick="closeModal()" type="button" style="margin-top:16px">Τέλεια! 🎊</button>
+    </div>
+  </div>
+
+  <!-- MODAL: SHARE -->
+  <div id="modal-share" class="modal hidden">
+    <div class="modal-head"><h2>📤 Κοινοποίηση</h2><button class="mclose" onclick="closeModal()" type="button">✕</button></div>
+    <div class="modal-body">
+      <div class="share-url-row">
+        <input type="text" id="shareUrl" readonly/>
+        <button onclick="copyUrl()" type="button">📋</button>
+      </div>
+      <div class="share-btns">
+        <button class="sbtn tw" onclick="shareTw()" type="button">🐦 Twitter / X</button>
+        <button class="sbtn wa" onclick="shareWa()" type="button">💬 WhatsApp</button>
+        <button class="sbtn cp" onclick="copyUrl()" type="button">📋 Αντιγραφή Link</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: FORGOT -->
+  <div id="modal-forgot" class="modal hidden">
+    <div class="modal-head"><h2>🔑 Επαναφορά Κωδικού</h2><button class="mclose" onclick="closeModal()" type="button">✕</button></div>
+    <div class="modal-body">
+      <p style="color:var(--t2);font-size:14px;margin-bottom:14px">Εισάγαγε το email σου και θα στείλουμε link επαναφοράς.</p>
+      <div class="fg"><label>Email</label><input type="email" id="forgotEmail" placeholder="email@uni.edu.gr" inputmode="email"/></div>
+      <button class="btn-auth" onclick="doForgot()" type="button">Αποστολή →</button>
+      <div class="auth-error hidden" id="forgotResult"></div>
+    </div>
+  </div>
+
+  <!-- PWA BANNER -->
+  <div id="pwaBanner" class="pwa-banner hidden">
+    <span>📱 Εγκατάσταση RateMyUni</span>
+    <div>
+      <button onclick="installPWA()" type="button">Εγκατάσταση</button>
+      <button onclick="dismissPWA()" type="button">✕</button>
+    </div>
+  </div>
+
+  <!-- AUTO-UPDATE BADGE -->
+  <div id="updateBadge" class="update-badge hidden">
+    🔄 Νέα δεδομένα διαθέσιμα — <button onclick="applyUpdate()" type="button">Ανανέωση</button>
+  </div>
+
+  <!-- LEVEL UP OVERLAY -->
+  <div id="levelUpOverlay" class="levelup-overlay hidden">
+    <div class="levelup-card">
+      <div class="levelup-icon">⭐</div>
+      <div class="levelup-label">LEVEL UP!</div>
+      <div class="levelup-num" id="levelUpNum">2</div>
+      <div class="levelup-msg" id="levelUpMsg">Συνέχισε έτσι!</div>
+      <button onclick="closeLevelUp()" type="button" class="btn-primary">Συνέχεια 🚀</button>
+    </div>
+  </div>
+
+  <!-- BADGE UNLOCK OVERLAY -->
+  <div id="badgeUnlockOverlay" class="badge-unlock-overlay hidden">
+    <div class="badge-unlock-card">
+      <div class="badge-unlock-icon" id="badgeUnlockIcon">🥉</div>
+      <div class="badge-unlock-title">Νέο Badge!</div>
+      <div class="badge-unlock-name" id="badgeUnlockName">Πρώτη Κριτική</div>
+      <div class="badge-unlock-desc" id="badgeUnlockDesc">Έγραψες την πρώτη σου κριτική!</div>
+      <button onclick="closeBadgeUnlock()" type="button" class="btn-primary">Υπέροχο! ✨</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/features.js"></script>
+<script>
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+  // Safety net: if scripts fail to load, hide splash after 6s
+  window.addEventListener('error', function(e) {
+    console.warn('Script error:', e);
+    setTimeout(() => {
+      var s = document.getElementById('splash');
+      if (s) s.style.display = 'none';
+      var auth = document.getElementById('authScreen');
+      if (auth) auth.classList.remove('hidden');
+    }, 1000);
+  });
+</script>
+</body>
+</html>
