@@ -2,21 +2,7 @@ const SUPABASE_URL = 'https://rncttqwxsejvlymojhgf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuY3R0cXd4c2Vqdmx5bW9qaGdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjU5MDEsImV4cCI6MjA5ODM0MTkwMX0.mPsHlNZsVJ7ZdX1jQ9x2dww-Y4Yl0svHxFFjwCoFdaM';
 let supabase = null;
 
-function initSupabase() {
-  const url = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && !SUPABASE_URL.startsWith('ΒΑΛΕ'))
-    ? SUPABASE_URL : localStorage.getItem('sb_url');
-  const key = (typeof SUPABASE_KEY !== 'undefined' && SUPABASE_KEY && !SUPABASE_KEY.startsWith('ΒΑΛΕ'))
-    ? SUPABASE_KEY : localStorage.getItem('sb_key');
-  if (url && key && window.supabase) {
-    try {
-      supabase = window.supabase.createClient(url, key);
-      document.getElementById('supabaseNotice')?.classList.remove('hidden');
-      console.log('[Supabase] Connected ✅');
-      return true;
-    } catch(e) { console.warn('[Supabase] Init failed:', e); }
-  }
-  return false;
-}
+
 
 async function saveSupabaseConfig() {
   const url = document.getElementById('sbUrl').value.trim();
