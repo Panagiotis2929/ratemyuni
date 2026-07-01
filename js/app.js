@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://rncttqwxsejvlymojhgf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuY3R0cXd4c2Vqdmx5bW9qaGdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjU5MDEsImV4cCI6MjA5ODM0MTkwMX0.mPsHlNZsVJ7ZdX1jQ9x2dww-Y4Yl0svHxFFjwCoFdaM';
-let supabase = null;
+let appSupabase = null;
 
 function initSupabase() {
   const url = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL && !SUPABASE_URL.startsWith('ΒΑΛΕ'))
@@ -9,8 +9,12 @@ function initSupabase() {
     ? SUPABASE_KEY : localStorage.getItem('sb_key');
   if (url && key && window.supabase) {
     try {
-      supabase = window.supabase.createClient(url, key);
-      document.getElementById('supabaseNotice')?.classList.remove('hidden');
+      appSupabase = window.supabase.createClient(url, key);
+      const notice = document.getElementById('supabaseNotice');
+      if (notice) {
+        notice.textContent = '✅ Supabase Auth έτοιμο';
+        notice.classList.remove('hidden');
+      }
       console.log('[Supabase] Connected ✅');
       return true;
     } catch(e) { console.warn('[Supabase] Init failed:', e); }
@@ -18,9 +22,124 @@ function initSupabase() {
   return false;
 }
 
+async function syncSupabaseReviews() {
+  if (!appSupabase) return;
+  const { data, error } = await appSupabase.from('reviews').select('*').order('created_at', { ascending: false });
+  if (error) {
+    console.warn('[Supabase] Could not load reviews:', error);
+    return;
+  }
+
+  const rows = data || [];
+  if (!rows.length) return;
+
+  rows.forEach(row => {
+    const prof = S.professors.find(p => String(p.id) === String(row.professor_id));
+    if (!prof) return;
+
+    const normalized = {
+      id: row.id,
+      uid: row.username || (row.user_id ? `sb:${row.user_id}` : 'anon'),
+      author: row.username || 'Ανώνυμος Φοιτητής',
+      date: row.created_at ? row.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      rating: Number(row.rating) || 0,
+      course: row.course || '',
+      sem: row.semester || '',
+      text: row.review_text || '',
+      chips: Array.isArray(row.chips) ? row.chips : [],
+      passed: row.passed,
+      helpfulUp: row.helpful_up || 0,
+      helpfulDown: row.helpful_down || 0,
+      fromSupabase: true,
+      professorId: row.professor_id
+    };
+
+    const exists = prof.reviews.some(r => r.id === normalized.id || (r.fromSupabase && r.text === normalized.text && r.date === normalized.date));
+    if (!exists) {
+      prof.reviews.unshift(normalized);
+    }
+  });
+
+  S.professors.forEach(recalc);
+  S.filtered = [...S.professors];
+  if (document.getElementById('mainApp') && !document.getElementById('mainApp').classList.contains('hidden')) {
+    renderPOTM();
+    renderTrending();
+    applyFilters();
+    renderStats();
+    renderRecent();
+    renderMyReviews();
+    renderProfile();
+    if (S.currentProf) renderProfDetail(S.currentProf);
+  }
+}
+
+async function syncSupabaseProfile() {
+  if (!appSupabase || !S.user || S.user.role === 'guest') return;
+  const uid = S.user.sbId || S.user.username;
+  const { data, error } = await appSupabase.from('profiles').select('*').eq('id', uid).single();
+  if (error) {
+    if (error.code !== 'PGRST116') console.warn('[Supabase] Could not load profile:', error);
+    return;
+  }
+
+  if (data) {
+    S.user.profile = data;
+    S.user.verified = Boolean(data?.xp >= 0 || S.user.verified);
+    if (typeof data?.xp === 'number') {
+      GS.xp = data.xp;
+      GS.level = data.level || 1;
+      GS.badges = data.badges || [];
+      GS.reviewCount = data.review_count || 0;
+      GS.helpfulReceived = data.helpful_received || 0;
+      GS.passYes = data.pass_yes || 0;
+      GS.passNo = data.pass_no || 0;
+      saveGamification();
+    }
+  }
+}
+
+async function persistReviewToSupabase(review, professor) {
+  if (!appSupabase || !S.user || S.user.role === 'guest') return null;
+  const payload = {
+    professor_id: professor?.id || review.professorId || '',
+    user_id: S.user.sbId || null,
+    username: S.user.username,
+    rating: review.rating,
+    difficulty: review.difficulty ?? null,
+    organization: review.organization ?? null,
+    inspiration: review.inspiration ?? null,
+    course: review.course || null,
+    semester: review.sem || null,
+    review_text: review.text,
+    chips: review.chips || [],
+    passed: review.passed ?? null
+  };
+
+  const { data, error } = await appSupabase.from('reviews').insert(payload).select('*').single();
+  if (error) {
+    console.warn('[Supabase] Review save failed:', error);
+    return null;
+  }
+  return data;
+}
+
+function openSupabaseModal() {
+  const urlEl = document.getElementById('sbUrl');
+  const keyEl = document.getElementById('sbKey');
+  const res = document.getElementById('sbResult');
+  if (urlEl) urlEl.value = localStorage.getItem('sb_url') || '';
+  if (keyEl) keyEl.value = localStorage.getItem('sb_key') || '';
+  if (res) {
+    res.textContent = '';
+    res.classList.add('hidden');
+  }
+  openModal('supabase');
+}
+
 async function saveSupabaseConfig() {
-  const url = document.getElementById('sbUrl').value.trim();
-  const key = document.getElementById('sbKey').value.trim();
+  const url = document.getElementById('sbUrl')?.value.trim() || '';
+  const key = document.getElementById('sbKey')?.value.trim() || '';
   const res = document.getElementById('sbResult');
   if (!url || !key) { showEl(res,'Συμπλήρωσε και τα δύο πεδία','err'); return; }
   localStorage.setItem('sb_url', url);
@@ -113,7 +232,7 @@ setTimeout(() => {
   }
 }, 5000);
 
-function loadData() {
+async function loadData() {
   // Safety check: if data.js failed to load
   if (typeof SEED_PROFESSORS === 'undefined' || !SEED_PROFESSORS) {
     console.error('data.js not loaded!');
@@ -133,13 +252,17 @@ function loadData() {
   S.filtered = [...S.professors];
   const t = localStorage.getItem('rmu_theme') || 'light';
   document.documentElement.setAttribute('data-theme', t);
+
+  if (appSupabase) {
+    await syncSupabaseReviews();
+  }
 }
 
 /* ── AUTH ── */
 async function checkAuth() {
   // Try Supabase first
-  if (supabase) {
-    const { data: { session } } = await supabase.auth.getSession();
+  if (appSupabase) {
+    const { data: { session } } = await appSupabase.auth.getSession();
     if (session?.user) {
       S.user = buildUser(session.user);
       showScreen('app'); return;
@@ -181,11 +304,19 @@ function showScreen(which) {
 }
 
 function switchAuthTab(tab) {
-  document.getElementById('formLogin').classList.toggle('hidden', tab !== 'login');
-  document.getElementById('formRegister').classList.toggle('hidden', tab !== 'register');
-  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
-  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+  const loginForm = document.getElementById('formLogin');
+  const registerForm = document.getElementById('formRegister');
+  const loginTab = document.getElementById('tabLogin');
+  const registerTab = document.getElementById('tabRegister');
+
+  if (loginForm) loginForm.classList.toggle('hidden', tab !== 'login');
+  if (registerForm) registerForm.classList.toggle('hidden', tab !== 'register');
+  if (loginTab) loginTab.classList.toggle('active', tab === 'login');
+  if (registerTab) registerTab.classList.toggle('active', tab === 'register');
 }
+
+window.openSupabaseModal = openSupabaseModal;
+window.saveSupabaseConfig = saveSupabaseConfig;
 
 async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
@@ -194,8 +325,8 @@ async function doLogin() {
   if (!isEduEmail(email)) return showEl(document.getElementById('loginError'),'Απαιτείται πανεπιστημιακό email (.edu.gr).','err');
 
   // Try Supabase
-  if (supabase) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  if (appSupabase) {
+    const { data, error } = await appSupabase.auth.signInWithPassword({ email, password: pass });
     if (error) return showEl(document.getElementById('loginError'), error.message,'err');
     S.user = buildUser(data.user);
     if (document.getElementById('rememberMe').checked) localStorage.setItem('rmu_remember', S.user.username);
@@ -230,8 +361,8 @@ async function doRegister() {
   const uniName = document.querySelector('#regUni option:checked')?.textContent || uniKey;
 
   // Try Supabase
-  if (supabase) {
-    const { data, error } = await supabase.auth.signUp({
+  if (appSupabase) {
+    const { data, error } = await appSupabase.auth.signUp({
       email, password: pass,
       options: { data: { username, uni: uniName, dept } }
     });
@@ -264,10 +395,14 @@ function loginUser(u, welcome) {
   S.user = u;
   showScreen('app');
   if (welcome) setTimeout(()=>toast(`👋 Καλωσόρισες, ${u.username}!`,'ok'), 300);
+  if (appSupabase) {
+    void syncSupabaseProfile();
+    void syncSupabaseReviews();
+  }
 }
 
 async function doLogout() {
-  if (supabase) await supabase.auth.signOut();
+  if (appSupabase) await appSupabase.auth.signOut();
   localStorage.removeItem('rmu_remember');
   sessionStorage.removeItem('rmu_session');
   S.user = null;
@@ -281,8 +416,8 @@ async function doForgot() {
   const email = document.getElementById('forgotEmail').value.trim();
   const res   = document.getElementById('forgotResult');
   if (!email) return showEl(res,'Εισάγαγε email.','err');
-  if (supabase) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (appSupabase) {
+    const { error } = await appSupabase.auth.resetPasswordForEmail(email);
     if (error) return showEl(res, error.message,'err');
     showEl(res,'✅ Στάλθηκε email επαναφοράς!','success');
   } else {
@@ -869,9 +1004,9 @@ function renderProfile(){
     <div class="profile-form" style="margin-top:20px">
       <div class="pf-title">⚡ Supabase Auth</div>
       <p style="font-size:13px;color:var(--t2);margin-bottom:12px">
-        ${supabase?'✅ Supabase Auth ενεργό — πανεπιστημιακή επαλήθευση ενεργοποιημένη':'⚠️ Supabase δεν έχει ρυθμιστεί. Χρησιμοποιείται τοπικός έλεγχος .edu.gr email.'}
+        ${appSupabase?'✅ Supabase Auth ενεργό — πανεπιστημιακή επαλήθευση ενεργοποιημένη':'⚠️ Supabase δεν έχει ρυθμιστεί. Χρησιμοποιείται τοπικός έλεγχος .edu.gr email.'}
       </p>
-      <button class="btn-secondary" onclick="openModal('supabase')">⚙️ Ρυθμίσεις Supabase</button>
+      <button class="btn-secondary" onclick="openSupabaseModal()">⚙️ Ρυθμίσεις Supabase</button>
     </div>`;
 }
 
@@ -903,7 +1038,7 @@ function updateCharCount(ta){
 
 function toggleChip(btn){ btn.classList.toggle('selected'); }
 
-function submitReview(){
+async function submitReview(){
   const name  =document.getElementById('rv-name').value.trim();
   const dept  =document.getElementById('rv-dept').value;
   const course=document.getElementById('rv-course').value.trim();
@@ -918,13 +1053,21 @@ function submitReview(){
   if(S.user?.role==='guest') return toast('Συνδέσου για να γράψεις κριτική','err');
 
   const uid=S.user?.username||'anon';
-  const rev={id:'r'+Date.now(),uid,author:'Ανώνυμος Φοιτητής',
-    date:new Date().toISOString().slice(0,10),rating:overall,course,sem,text,chips};
+  const rev={id:'r'+Date.now(),uid,author:S.user?.username||'Ανώνυμος Φοιτητής',
+    date:new Date().toISOString().slice(0,10),rating:overall,course,sem,text,chips,
+    difficulty:difficulty||null,organization:organization||null,inspiration:inspiration||null,
+    passed:typeof selectedPass === 'boolean' ? selectedPass : null};
 
   let prof=S.professors.find(p=>p.name.toLowerCase().includes(name.toLowerCase()));
   if(prof){
     if(prof.reviews.some(r=>r.uid===uid&&r.course===course&&course))
       return toast('Έχεις ήδη αξιολογήσει αυτό το μάθημα','err');
+    const remote = appSupabase ? await persistReviewToSupabase(rev, prof) : null;
+    if (remote) {
+      rev.id = remote.id;
+      rev.fromSupabase = true;
+      rev.professorId = prof.id;
+    }
     prof.reviews.unshift(rev); recalc(prof);
     const er=JSON.parse(localStorage.getItem('rmu_extra_reviews')||'{}');
     if(!er[prof.id]) er[prof.id]=[];
@@ -1057,14 +1200,20 @@ function exportPDF(id){
 
 /* ── MODALS ── */
 function openModal(id){
+  const modal = document.getElementById(`modal-${id}`);
+  const backdrop = document.getElementById('backdrop');
+  if (!backdrop || !modal) {
+    toast('⚠️ Αυτό το παράθυρο δεν είναι διαθέσιμο ακόμη','info');
+    return;
+  }
   S.modal=id;
-  document.getElementById('backdrop').classList.remove('hidden');
-  document.getElementById(`modal-${id}`).classList.remove('hidden');
+  backdrop.classList.remove('hidden');
+  modal.classList.remove('hidden');
   document.body.style.overflow='hidden';
 }
 function closeModal(){
   if(S.modal) document.getElementById(`modal-${S.modal}`)?.classList.add('hidden');
-  document.getElementById('backdrop').classList.add('hidden');
+  document.getElementById('backdrop')?.classList.add('hidden');
   document.body.style.overflow=''; S.modal=null;
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape') closeModal();});

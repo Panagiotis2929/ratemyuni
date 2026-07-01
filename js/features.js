@@ -561,13 +561,13 @@ window.renderProfDetail = function(p) {
    PATCH submitReview to award XP + handle pass rate
 ──────────────────────────────────────────────────────────────── */
 const _origSubmitReview = window.submitReview;
-window.submitReview = function() {
+window.submitReview = async function() {
   // Validate pass rate
   if (selectedPass === null) {
     toast('Απάντησε αν πέρασες το μάθημα','err'); return;
   }
   // Call original submit
-  _origSubmitReview();
+  await _origSubmitReview();
   // After submit: award XP
   if (!S.user || S.user.role === 'guest') return;
   loadGamification();

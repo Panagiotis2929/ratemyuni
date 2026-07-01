@@ -45,8 +45,8 @@
     <div class="auth-brand"><div class="auth-brand-icon">★</div><span>RateMyUni</span></div>
     <p class="auth-tagline">Αξιολόγησε τους καθηγητές σου ανώνυμα</p>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('login')">Σύνδεση</button>
-      <button class="auth-tab" onclick="switchAuthTab('register')">Εγγραφή</button>
+      <button id="tabLogin" class="auth-tab active" onclick="switchAuthTab('login')">Σύνδεση</button>
+      <button id="tabRegister" class="auth-tab" onclick="switchAuthTab('register')">Εγγραφή</button>
     </div>
     <!-- LOGIN -->
     <div id="formLogin" class="auth-form">
@@ -472,15 +472,8 @@
       <div class="fg pass-rate-q">
         <label>Πέρασες το μάθημα; *</label>
         <div class="pass-options">
-          <button class="pass-opt" id="passYes" onclick="selectPass(true)"  type="button">✅ Ναι, πέρασα</button>
-          <button class="pass-opt" id="passNo"  onclick="selectPass(false)" type="button">❌ Όχι, κόπηκα</button>
-        </div>
-      </div>
-      <div class="fg pass-rate-q">
-        <label>Πέρασες το μάθημα; *</label>
-        <div class="pass-options">
-          <button class="pass-opt" id="passYes" onclick="selectPass(true)" type="button">✅ Ναι, πέρασα!</button>
-          <button class="pass-opt" id="passNo"  onclick="selectPass(false)" type="button">❌ Όχι, κόπηκα</button>
+          <button class="pass-opt" id="passYes" onclick="selectPass(true)" type="button">✅ Ναι, πέρασα</button>
+          <button class="pass-opt" id="passNo" onclick="selectPass(false)" type="button">❌ Όχι, κόπηκα</button>
         </div>
       </div>
       <button class="btn-auth" onclick="submitReview()" type="button">Υποβολή Κριτικής →</button>
@@ -533,6 +526,19 @@
       <div class="fg"><label>Email</label><input type="email" id="forgotEmail" placeholder="email@uni.edu.gr" inputmode="email"/></div>
       <button class="btn-auth" onclick="doForgot()" type="button">Αποστολή →</button>
       <div class="auth-error hidden" id="forgotResult"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: SUPABASE -->
+  <div id="modal-supabase" class="modal hidden">
+    <div class="modal-head"><h2>⚙️ Supabase Auth</h2><button class="mclose" onclick="closeModal()" type="button">✕</button></div>
+    <div class="modal-body">
+      <p style="color:var(--t2);font-size:14px;margin-bottom:14px">Σύνδεσε το Supabase για αυθεντικοποίηση με πραγματικούς λογαριασμούς.</p>
+      <div class="fg"><label>Supabase URL</label><input type="url" id="sbUrl" placeholder="https://xyz.supabase.co"/></div>
+      <div class="fg"><label>Supabase Anon Key</label><input type="text" id="sbKey" placeholder="eyJ..."/></div>
+      <button class="btn-auth" onclick="saveSupabaseConfig()" type="button">Σύνδεση Supabase →</button>
+      <div class="auth-error hidden" id="sbResult"></div>
+      <div class="auth-error hidden" id="supabaseNotice"></div>
     </div>
   </div>
 
