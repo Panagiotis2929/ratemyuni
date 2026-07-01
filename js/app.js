@@ -9,7 +9,7 @@
 
 ────────────────────────────────────────────────────── */
 const SUPABASE_URL = 'https://rncttqwxsejvlymojhgf.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_nd83uLlccMB2dkEDvMmtAw_Eb_MytFt';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuY3R0cXd4c2Vqdmx5bW9qaGdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjU5MDEsImV4cCI6MjA5ODM0MTkwMX0.mPsHlNZsVJ7ZdX1jQ9x2dww-Y4Yl0svHxFFjwCoFdaM';
 let supabase = null;
 
 function initSupabase() {
