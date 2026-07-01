@@ -1,16 +1,3 @@
-/* ═══════════════════════════════════════════════════════
-   RATEMYUNI v4 — Full App
-   + Supabase Auth (.edu.gr only)
-   + Compare 1v1
-   + 30 real professors
-═══════════════════════════════════════════════════════ */
-
-/* ── Supabase Config ──────────────────────────────────────
-
-────────────────────────────────────────────────────── */
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/app.js"></script>
-
 const SUPABASE_URL = 'https://rncttqwxsejvlymojhgf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuY3R0cXd4c2Vqdmx5bW9qaGdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjU5MDEsImV4cCI6MjA5ODM0MTkwMX0.mPsHlNZsVJ7ZdX1jQ9x2dww-Y4Yl0svHxFFjwCoFdaM';
 let supabase = null;
