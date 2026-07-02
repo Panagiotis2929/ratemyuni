@@ -382,6 +382,7 @@ input,select,textarea{font-family:var(--f-body)}
 .fg{display:flex;flex-direction:column;gap:6px}
 .fg label{font-size:11px;font-weight:700;text-transform:uppercase;
   letter-spacing:.5px;color:var(--t3)}
+.fg{position:relative;display:flex;flex-direction:column;gap:6px}
 .fg select,.fg input[type=text]{padding:9px 12px;background:var(--input-bg);
   border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:14px;
   color:var(--t1);outline:none;transition:border-color var(--t);

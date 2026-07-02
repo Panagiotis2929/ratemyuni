@@ -1056,7 +1056,11 @@ function getAllowedReviewProfessors() {
 function openReviewFor(id){
   const p=S.professors.find(x=>x.id===id);
   const deptField=document.getElementById('rv-dept');
-  if(p) document.getElementById('rv-name').value=p.name;
+  const profIdField=document.getElementById('rv-profId');
+  if(p) {
+    document.getElementById('rv-name').value=p.name;
+    if(profIdField) profIdField.value = p.id;
+  }
   if (S.user && S.user.dept) {
     if (deptField) deptField.value = S.user.dept;
     if (deptField) deptField.disabled = true;
@@ -1159,6 +1163,8 @@ function recalc(p){
 function handleReviewSearch(val){
   const q=val.trim().toLowerCase();
   const drop=document.getElementById('rvSearchDrop');
+  const profIdField=document.getElementById('rv-profId');
+  if(profIdField) profIdField.value = '';
   if(!drop) return;
   if(q.length<2){ drop.classList.remove('open'); drop.innerHTML=''; return; }
   const hits=getAllowedReviewProfessors().filter(p=>
