@@ -64,6 +64,22 @@ function loadGamification() {
     passYes:         stored.passYes         || 0,
     passNo:          stored.passNo          || 0,
   });
+
+  if (!stored.reviewCount && S.user && Array.isArray(S.professors)) {
+    const userIds = [S.user.username, S.user.sbId, `sb:${S.user.sbId}`, `sb:${S.user.username}`].filter(Boolean);
+    const derivedCount = S.professors.reduce((count, prof) => {
+      return count + prof.reviews.filter(r => userIds.includes(r.uid)).length;
+    }, 0);
+    if (derivedCount > 0) GS.reviewCount = derivedCount;
+  }
+
+  if (!stored.helpfulReceived && S.user && Array.isArray(S.professors)) {
+    const userIds = [S.user.username, S.user.sbId, `sb:${S.user.sbId}`, `sb:${S.user.username}`].filter(Boolean);
+    const derivedHelpful = S.professors.reduce((count, prof) => {
+      return count + prof.reviews.filter(r => userIds.includes(r.uid)).reduce((sum, r) => sum + (r.helpfulUp || 0), 0);
+    }, 0);
+    if (derivedHelpful > 0) GS.helpfulReceived = derivedHelpful;
+  }
   // Award verified XP if not already done
   if (GS.verified && !stored.verifiedAwarded) {
     addXP(XP_RULES.verified_email, false);
@@ -564,23 +580,19 @@ const _origSubmitReview = window.submitReview;
 window.submitReview = async function() {
   // Validate pass rate
   if (selectedPass === null) {
-    toast('Απάντησε αν πέρασες το μάθημα','err'); return;
+    toast('Απάντησε αν πέρασες το μάθημα','err'); return false;
   }
   // Call original submit
-  await _origSubmitReview();
+  const result = await _origSubmitReview();
+  if (!result) return false;
+
   // After submit: award XP
-  if (!S.user || S.user.role === 'guest') return;
+  if (!S.user || S.user.role === 'guest') return true;
   loadGamification();
   const wasFirst = GS.reviewCount === 0;
   GS.reviewCount++;
   if (selectedPass === true)  GS.passYes++;
   else                        GS.passNo++;
-
-  // Inject passed field into the last review
-  const allRevs = S.professors.flatMap(p => p.reviews.filter(r => r.uid === S.user.username));
-  if (allRevs.length > 0) {
-    allRevs[allRevs.length - 1].passed = selectedPass;
-  }
 
   saveGamification();
   addXP(XP_RULES.new_review);
@@ -588,6 +600,7 @@ window.submitReview = async function() {
   if (GS.reviewCount === 10) addXP(XP_RULES.ten_reviews);
   checkAchievements();
   selectedPass = null;
+  return true;
 };
 
 /* ────────────────────────────────────────────────────────────────

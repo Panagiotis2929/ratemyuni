@@ -39,6 +39,8 @@ async function syncSupabaseReviews() {
       recalc(prof);
     });
   } else {
+    // Clear existing reviews so sync remains idempotent.
+    S.professors.forEach(prof => { prof.reviews = []; });
     rows.forEach(row => {
       const professorId = row.professor_id?.toString().trim();
       const prof = S.professors.find(p => p.id?.toString().trim().toLowerCase() === professorId?.toLowerCase());
@@ -489,6 +491,7 @@ function initApp() {
   window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>20));
   document.addEventListener('click',e=>{
     if(!e.target.closest('.search-bar')) closeDrop();
+    if(!e.target.closest('.review-search')) document.getElementById('rvSearchDrop')?.classList.remove('open');
     if(!e.target.closest('.user-menu-wrap')) closeUserMenu();
     if(!e.target.closest('.compare-picker')) { closeCmpDrop(1); closeCmpDrop(2); }
   });
@@ -991,7 +994,13 @@ function renderMyReviews(){
       <div class="empty-ttl">Συνδέσου για να δεις τις κριτικές σου</div></div>`;return;
   }
   const my=[];
-  S.professors.forEach(p=>p.reviews.filter(r=>r.uid===S.user.username).forEach(r=>my.push({...r,profName:p.name,profId:p.id})));
+  const added = new Set();
+  S.professors.forEach(p=>p.reviews.filter(isReviewMine).forEach(r=>{
+    if (!added.has(r.id)) {
+      added.add(r.id);
+      my.push({...r,profName:p.name,profId:p.id});
+    }
+  }));
   if(!my.length){
     el.innerHTML=`<div class="empty"><div class="empty-ico">📝</div>
       <div class="empty-ttl">Δεν έχεις γράψει κριτικές ακόμα</div>
@@ -1053,24 +1062,59 @@ function getAllowedReviewProfessors() {
   return S.professors.filter(p => p.uni === S.user.uni && p.dept === S.user.dept);
 }
 
+function resetReviewForm() {
+  const nameField = document.getElementById('rv-name');
+  const profIdField = document.getElementById('rv-profId');
+  const courseField = document.getElementById('rv-course');
+  const deptField = document.getElementById('rv-dept');
+  const semField = document.getElementById('rv-sem');
+  const textField = document.getElementById('rv-text');
+  const yesBtn = document.getElementById('passYes');
+  const noBtn = document.getElementById('passNo');
+
+  if (nameField) nameField.value = '';
+  if (profIdField) profIdField.value = '';
+  if (courseField) courseField.value = '';
+  if (semField) semField.value = '1';
+  if (textField) textField.value = '';
+  if (deptField && !(S.user && S.user.dept)) deptField.value = '';
+
+  selectedPass = null;
+  if (yesBtn) yesBtn.classList.remove('selected-yes');
+  if (noBtn) noBtn.classList.remove('selected-no');
+
+  S.stars = { overall:0, difficulty:0, organization:0, inspiration:0 };
+  initStars();
+  document.querySelectorAll('.chip.selected').forEach(c => c.classList.remove('selected'));
+  document.getElementById('charCnt').textContent = '0/500';
+  document.getElementById('rvSearchDrop')?.classList.remove('open');
+}
+
 function openReviewFor(id){
   const p=S.professors.find(x=>x.id===id);
-  const deptField=document.getElementById('rv-dept');
-  const profIdField=document.getElementById('rv-profId');
+  if (S.user && S.user.dept && p && (p.uni !== S.user.uni || p.dept !== S.user.dept)) {
+    return toast('Μπορείς να γράψεις κριτική μόνο για καθηγητές του τμήματός σου.','err');
+  }
+
+  S.shareTarget=id;
+  openModal('addReview');
+
   if(p) {
     document.getElementById('rv-name').value=p.name;
-    if(profIdField) profIdField.value = p.id;
+    const profIdField=document.getElementById('rv-profId');
+    if (profIdField) profIdField.value = p.id;
   }
-  if (S.user && S.user.dept) {
-    if (deptField) deptField.value = S.user.dept;
-    if (deptField) deptField.disabled = true;
-    if (p && (p.uni !== S.user.uni || p.dept !== S.user.dept)) {
-      return toast('Μπορείς να γράψεις κριτική μόνο για καθηγητές του τμήματός σου.','err');
+
+  const deptField=document.getElementById('rv-dept');
+  if (deptField) {
+    if (S.user && S.user.dept) {
+      deptField.value = S.user.dept;
+      deptField.disabled = true;
+    } else {
+      deptField.disabled = false;
+      if (p) deptField.value = p.dept || '';
     }
-  } else if (deptField) {
-    deptField.disabled = false;
   }
-  S.shareTarget=id; openModal('addReview');
 }
 
 function initStars(){
@@ -1102,23 +1146,17 @@ async function submitReview(){
   const text  =document.getElementById('rv-text').value.trim();
   const chips =[...document.querySelectorAll('.chip.selected')].map(c=>c.dataset.v);
   const {overall,difficulty,organization,inspiration}=S.stars;
-  if(!name)    return toast('Εισάγεψε το όνομα καθηγητή','err');
-  if(!dept)    return toast('Επίλεξε τμήμα','err');
-  if(!overall) return toast('Επίλεξε συνολική βαθμολογία','err');
-  if(text.length<20) return toast('Γράψε τουλάχιστον 20 χαρακτήρες','err');
-  if(S.user?.role==='guest') return toast('Συνδέσου για να γράψεις κριτική','err');
+  if(!name)    { toast('Εισάγεψε το όνομα καθηγητή','err'); return false; }
+  if(!dept)    { toast('Επίλεξε τμήμα','err'); return false; }
+  if(!overall) { toast('Επίλεξε συνολική βαθμολογία','err'); return false; }
+  if(text.length<20) { toast('Γράψε τουλάχιστον 20 χαρακτήρες','err'); return false; }
+  if(S.user?.role==='guest') { toast('Συνδέσου για να γράψεις κριτική','err'); return false; }
 
   const profId = document.getElementById('rv-profId')?.value;
-  let prof = profId ? S.professors.find(p => p.id === profId) : null;
+  const prof = profId ? S.professors.find(p => p.id === profId) : null;
   if (!prof) {
-    const allowed = getAllowedReviewProfessors();
-    prof = allowed.find(p => p.name.toLowerCase().includes(name.toLowerCase()));
-  }
-  if (!prof) {
-    if (S.user && S.user.uni && S.user.dept) {
-      return toast('Βρες καθηγητή από το τμήμα σου για να γράψεις κριτική.','err');
-    }
-    return toast('Επίλεξε καθηγητή από τα διαθέσιμα αποτελέσματα.','err');
+    toast('Επίλεξε καθηγητή από τη λίστα των αποτελεσμάτων.','err');
+    return false;
   }
 
   const uid=S.user?.username||'anon';
@@ -1127,8 +1165,10 @@ async function submitReview(){
     difficulty:difficulty||null,organization:organization||null,inspiration:inspiration||null,
     passed:typeof selectedPass === 'boolean' ? selectedPass : null};
 
-  if(prof.reviews.some(r=>r.uid===uid&&r.course===course&&course))
-    return toast('Έχεις ήδη αξιολογήσει αυτό το μάθημα','err');
+  if(prof.reviews.some(r=>r.uid===uid&&r.course===course&&course)) {
+    toast('Έχεις ήδη αξιολογήσει αυτό το μάθημα','err');
+    return false;
+  }
 
   const remote = appSupabase ? await persistReviewToSupabase(rev, prof) : null;
   if (remote) {
@@ -1151,6 +1191,7 @@ async function submitReview(){
   S.stars={overall:0,difficulty:0,organization:0,inspiration:0}; initStars();
   document.querySelectorAll('.chip.selected').forEach(c=>c.classList.remove('selected'));
   document.getElementById('charCnt').textContent='0/500';
+  return true;
 }
 
 function recalc(p){
@@ -1193,6 +1234,11 @@ function selectReviewProf(id){
   document.getElementById('rv-profId').value = p.id;
   document.getElementById('rv-dept').value = S.user?.dept || p.dept || '';
   document.getElementById('rvSearchDrop').classList.remove('open');
+}
+
+function isReviewMine(r){
+  if (!S.user) return false;
+  return r.uid === S.user.sbId || r.uid === S.user.username || r.uid === `sb:${S.user.sbId}` || r.uid === `sb:${S.user.username}`;
 }
 
 function computeBadges(p){
@@ -1303,6 +1349,7 @@ function openModal(id){
     return;
   }
   if (id === 'addReview') {
+    resetReviewForm();
     const deptField = document.getElementById('rv-dept');
     if (deptField) {
       if (S.user && S.user.uni && S.user.dept) {
